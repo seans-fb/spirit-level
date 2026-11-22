@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Level — Precision Spirit Level</title>
+    <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -115,6 +122,48 @@
             opacity: 0;
         }
 
+        /* Mode switch (Surface / Picture) */
+        .mode-btn {
+            padding: 0.45rem 1.1rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #a1a1aa;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .mode-btn.active {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        /* Picture mode: true-horizon line vs. fixed phone-edge reference */
+        .picture-frame {
+            border: 1.5px solid rgba(255, 255, 255, 0.22);
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        body.is-level .picture-frame {
+            border-color: rgba(48, 209, 88, 0.85);
+            box-shadow: 0 0 35px rgba(48, 209, 88, 0.25), inset 0 0 25px rgba(48, 209, 88, 0.15);
+        }
+        .horizon-line {
+            background: #ffffff;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+            transition: background 0.25s ease, box-shadow 0.25s ease;
+            will-change: transform;
+        }
+        body.is-level .horizon-line {
+            background: #30D158;
+            box-shadow: 0 0 18px rgba(48, 209, 88, 0.8);
+        }
+
+        /* Short landscape screens (phone on its side, full screen) */
+        @media (max-height: 520px) {
+            #totalDegreeDisplay { font-size: 3.25rem; line-height: 1; }
+            #pictureView { height: 9rem; }
+            .readout-block { margin-bottom: 0.75rem; }
+        }
+
         /* Custom sleek range slider for desktop simulation */
         input[type="range"] {
             -webkit-appearance: none;
@@ -156,6 +205,16 @@
         </div>
 
         <div class="flex items-center gap-2">
+            <!-- Full Screen Toggle Button -->
+            <button id="fullscreenBtn" title="Full screen" class="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-300 hover:text-white active:scale-95 transition">
+                <svg id="fsIconEnter" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+                </svg>
+                <svg id="fsIconExit" class="w-4 h-4 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+                </svg>
+            </button>
+
             <!-- Haptic Toggle Button -->
             <button id="hapticToggleBtn" title="Toggle Haptic Vibration" class="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-300 hover:text-white active:scale-95 transition">
                 <svg id="hapticIconOn" class="w-4 h-4 text-iosGreen" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -176,6 +235,14 @@
         </div>
     </header>
 
+    <!-- Mode Switch -->
+    <nav class="w-full max-w-md flex justify-center pb-1 z-10">
+        <div class="inline-flex p-1 rounded-full bg-zinc-900/90 border border-zinc-800">
+            <button id="modeSurfaceBtn" class="mode-btn active">Surface</button>
+            <button id="modePictureBtn" class="mode-btn">Picture</button>
+        </div>
+    </nav>
+
     <!-- Main Center Spirit Level Display -->
     <main class="w-full max-w-md flex-1 flex flex-col items-center justify-center my-auto relative">
         
@@ -183,7 +250,7 @@
         <div class="ambient-glow absolute w-80 h-80 sm:w-96 sm:h-96 rounded-full pointer-events-none"></div>
 
         <!-- Primary Degree Readout (Apple Measure Style) -->
-        <div class="text-center mb-6 z-10">
+        <div class="readout-block text-center mb-6 z-10">
             <div class="relative inline-flex items-baseline justify-center">
                 <span id="totalDegreeDisplay" class="text-7xl sm:text-8xl font-extralight tracking-tight text-white transition-colors duration-300">0°</span>
             </div>
@@ -228,7 +295,7 @@
             </div>
 
             <!-- iOS Sensor Permission Overlay (Shown only when explicit permission is required) -->
-            <div id="permissionOverlay" class="hidden absolute inset-0 rounded-full bg-black/85 backdrop-blur-md z-20 flex flex-col items-center justify-center p-6 text-center border border-zinc-800">
+            <div id="permissionOverlay" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex flex-col items-center justify-center p-8 text-center">
                 <div class="w-12 h-12 rounded-2xl bg-iosGreen/20 text-iosGreen flex items-center justify-center mb-3">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -236,14 +303,27 @@
                 </div>
                 <h2 class="text-base font-semibold text-white mb-1">Sensor Access</h2>
                 <p class="text-xs text-zinc-400 mb-4 leading-relaxed">Allow motion & orientation access to measure surface tilt.</p>
-                <button id="enableSensorsBtn" class="w-full py-3 px-4 rounded-xl bg-iosGreen text-black font-semibold text-sm shadow-lg shadow-iosGreen/25 active:scale-95 transition">
+                <button id="enableSensorsBtn" class="w-full max-w-xs py-3 px-4 rounded-xl bg-iosGreen text-black font-semibold text-sm shadow-lg shadow-iosGreen/25 active:scale-95 transition">
                     Start Level
                 </button>
             </div>
         </div>
 
+        <!-- Picture Mode: hold the phone's edge against the frame -->
+        <div id="pictureView" class="hidden picture-frame relative w-full h-56 sm:h-64 rounded-3xl overflow-hidden z-10">
+            <!-- Fixed reference: the phone's own edge -->
+            <div class="absolute left-4 right-4 top-1/2 h-px bg-white/30"></div>
+            <div class="absolute left-4 top-1/2 -translate-y-1/2 w-px h-6 bg-white/50"></div>
+            <div class="absolute right-4 top-1/2 -translate-y-1/2 w-px h-6 bg-white/50"></div>
+            <!-- True horizon (rotates opposite to the phone) -->
+            <div id="horizonLine" class="horizon-line absolute top-1/2 h-[3px] -mt-[1.5px] rounded-full" style="left:-15%;right:-15%"></div>
+            <!-- Center pivot -->
+            <div class="absolute left-1/2 top-1/2 w-3 h-3 -ml-1.5 -mt-1.5 rounded-full border border-white/70 bg-black"></div>
+        </div>
+        <p id="pictureTip" class="hidden mt-4 text-xs text-zinc-500 text-center z-10">Rest the phone's edge on top of the frame — portrait or landscape both work.</p>
+
         <!-- Axis Breakdown Readout (X = Left/Right Gamma, Y = Front/Back Beta) -->
-        <div class="w-full max-w-xs grid grid-cols-2 gap-3 mt-7 z-10">
+        <div id="axisReadouts" class="w-full max-w-xs grid grid-cols-2 gap-3 mt-7 z-10">
             <div class="bg-zinc-900/75 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-3 text-center">
                 <div class="text-[11px] font-medium uppercase tracking-wider text-zinc-500 mb-0.5">X-Axis (Roll)</div>
                 <div id="gammaReadout" class="text-xl font-normal text-zinc-100">0.0°</div>
@@ -271,17 +351,17 @@
                 </button>
             </div>
         </div>
-        <p class="text-[11px] text-zinc-400 mb-3">Drag directly on the circle above or use the sliders below to simulate tilt.</p>
+        <p id="simHelp" class="text-[11px] text-zinc-400 mb-3">Drag directly on the circle above or use the sliders below to simulate tilt.</p>
         
         <div class="space-y-3">
             <div>
                 <div class="flex justify-between text-xs text-zinc-400 mb-1">
-                    <span>Left / Right (Gamma)</span>
+                    <span id="simGammaLabel">Left / Right (Gamma)</span>
                     <span id="simGammaVal" class="text-zinc-200 font-medium">0.0°</span>
                 </div>
                 <input id="simGammaSlider" type="range" min="-45" max="45" step="0.1" value="0" class="w-full">
             </div>
-            <div>
+            <div id="simBetaRow">
                 <div class="flex justify-between text-xs text-zinc-400 mb-1">
                     <span>Front / Back (Beta)</span>
                     <span id="simBetaVal" class="text-zinc-200 font-medium">0.0°</span>
@@ -324,7 +404,9 @@
             // --- Configuration Constants ---
             const LEVEL_THRESHOLD_DEG = 0.5;     // ±0.5° triggers level green state
             const MAX_DISPLAY_ANGLE = 45.0;      // Clamp visual travel at 45 degrees
-            const SMOOTHING_FACTOR = 0.16;       // Low-pass filter alpha (lower = smoother, higher = snappier)
+            const SMOOTHING_FACTOR = 0.16;
+            const PICTURE_THRESHOLD_DEG = 0.3;  // tighter tolerance for hanging pictures
+            const UPRIGHT_LIMIT = 0.85;         // |gravity z| above this = phone is lying too flat for Picture mode       // Low-pass filter alpha (lower = smoother, higher = snappier)
 
             // --- Application State ---
             const state = {
@@ -345,7 +427,16 @@
                 permissionDenied: false,
                 listenersAttached: false,
                 sensorSource: null,
-                lastOrientationAt: -Infinity
+                lastOrientationAt: -Infinity,
+                lastMotionAt: -Infinity,
+                mode: 'surface',
+                orientGravity: [0, 0, 1],   // unit gravity (device frame) derived from orientation
+                motionGravity: [0, 0, 1],   // unit gravity (device frame) from the accelerometer
+                offsetRoll: 0,
+                smoothRoll: 0,
+                pictureCalibrated: false,
+                pictureLabel: '',
+                wakeLock: null
             };
 
             // --- DOM Elements ---
@@ -376,12 +467,30 @@
                 simGammaVal: document.getElementById('simGammaVal'),
                 simBetaVal: document.getElementById('simBetaVal'),
                 simFlattenBtn: document.getElementById('simFlattenBtn'),
-                retrySensorsBtn: document.getElementById('retrySensorsBtn')
+                retrySensorsBtn: document.getElementById('retrySensorsBtn'),
+                fullscreenBtn: document.getElementById('fullscreenBtn'),
+                fsIconEnter: document.getElementById('fsIconEnter'),
+                fsIconExit: document.getElementById('fsIconExit'),
+                modeSurfaceBtn: document.getElementById('modeSurfaceBtn'),
+                modePictureBtn: document.getElementById('modePictureBtn'),
+                pictureView: document.getElementById('pictureView'),
+                pictureTip: document.getElementById('pictureTip'),
+                horizonLine: document.getElementById('horizonLine'),
+                axisReadouts: document.getElementById('axisReadouts'),
+                simHelp: document.getElementById('simHelp'),
+                simGammaLabel: document.getElementById('simGammaLabel'),
+                simBetaRow: document.getElementById('simBetaRow')
             };
 
             // --- Initialization ---
             function init() {
+                // The permission prompt must sit outside the draggable reticle (which captures taps)
+                document.body.appendChild(dom.permissionOverlay);
                 setupEventListeners();
+                let savedMode = 'surface';
+                try { savedMode = localStorage.getItem('level-mode') || 'surface'; } catch (_) {}
+                setMode(savedMode === 'picture' ? 'picture' : 'surface');
+                keepAwake();
                 detectAndStartSensors();
                 requestAnimationFrame(renderLoop);
             }
@@ -483,8 +592,10 @@
                 if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                     requests.push(DeviceMotionEvent.requestPermission().catch(() => 'denied'));
                 }
-                const results = await Promise.all(requests);
+                // Hide the prompt right away and never wait more than 3s for an answer
                 dom.permissionOverlay.classList.add('hidden');
+                const timeout = new Promise(resolve => setTimeout(() => resolve(['timeout']), 3000));
+                const results = await Promise.race([Promise.all(requests), timeout]);
 
                 // Listen either way: some browsers answer "denied" yet still deliver data.
                 // If nothing arrives within 2s, scheduleSensorCheck() falls back to Test Mode.
@@ -502,6 +613,8 @@
             function handleDeviceOrientation(event) {
                 if (event.beta == null || event.gamma == null) return;
                 state.lastOrientationAt = performance.now();
+                const b = event.beta * Math.PI / 180, g = event.gamma * Math.PI / 180;
+                state.orientGravity = [-Math.cos(b) * Math.sin(g), Math.sin(b), Math.cos(b) * Math.cos(g)];
                 applyTilt(event.beta, event.gamma, 'Orientation');
             }
 
@@ -510,14 +623,20 @@
              * Skipped whenever orientation data has arrived in the last 500ms.
              */
             function handleDeviceMotion(event) {
-                if (performance.now() - state.lastOrientationAt < 500) return;
                 const g = event.accelerationIncludingGravity;
                 if (!g || g.x == null || g.y == null || g.z == null) return;
 
                 // iOS reports the gravity vector with the opposite sign to Android/Chrome
                 const sign = state.isIOS ? -1 : 1;
                 const ax = g.x * sign, ay = g.y * sign, az = g.z * sign;
-                if (Math.hypot(ax, ay, az) < 1) return; // no meaningful gravity reading
+                const mag = Math.hypot(ax, ay, az);
+                if (mag < 1) return; // no meaningful gravity reading
+
+                // Picture mode prefers the accelerometer: it stays precise when the phone is upright
+                state.motionGravity = [ax / mag, ay / mag, az / mag];
+                state.lastMotionAt = performance.now();
+
+                if (performance.now() - state.lastOrientationAt < 500) return;
 
                 const toDeg = 180 / Math.PI;
                 const beta = Math.atan2(ay, az) * toDeg;                     // front/back
@@ -572,6 +691,65 @@
              * level threshold checks, and updates DOM positions cleanly.
              */
             function renderLoop() {
+                if (state.mode === 'picture') {
+                    renderPicture();
+                } else {
+                    renderSurface();
+                }
+                requestAnimationFrame(renderLoop);
+            }
+
+            /**
+             * Current unit gravity vector in the device frame (accelerometer if fresh)
+             */
+            function currentGravity() {
+                return performance.now() - state.lastMotionAt < 500 ? state.motionGravity : state.orientGravity;
+            }
+
+            /**
+             * Rotation of the phone about its screen axis, measured from the nearest
+             * 90° position (so portrait, landscape and upside-down all work).
+             * Positive = rotated clockwise = right side low. Returns null when lying flat.
+             */
+            function rawPictureRoll() {
+                if (state.simMode) return state.rawGamma;
+                const [gx, gy, gz] = currentGravity();
+                if (Math.abs(gz) > UPRIGHT_LIMIT) return null;
+                const phi = Math.atan2(-gx, gy) * 180 / Math.PI;
+                return phi - 90 * Math.round(phi / 90);
+            }
+
+            function renderPicture() {
+                const raw = rawPictureRoll();
+                const flat = raw === null;
+                if (!flat) {
+                    const target = raw - state.offsetRoll;
+                    state.smoothRoll += (target - state.smoothRoll) * SMOOTHING_FACTOR;
+                }
+                const roll = Math.abs(state.smoothRoll) < 0.03 ? 0 : state.smoothRoll;
+                const nowLevel = !flat && Math.abs(roll) <= PICTURE_THRESHOLD_DEG;
+
+                if (nowLevel !== state.isLevel) {
+                    state.isLevel = nowLevel;
+                    onLevelStateChanged(nowLevel);
+                }
+
+                dom.totalDegreeDisplay.textContent = flat ? '—' : `${nowLevel ? '0.0' : Math.abs(roll).toFixed(1)}°`;
+
+                const label = flat ? 'HOLD UPRIGHT'
+                    : nowLevel ? 'LEVEL'
+                    : roll > 0 ? 'RAISE RIGHT SIDE' : 'RAISE LEFT SIDE';
+                if (label !== state.pictureLabel) {
+                    state.pictureLabel = label;
+                    dom.levelStatusSub.textContent = label;
+                }
+
+                // Horizon stays world-level, so it rotates opposite to the phone
+                const shown = Math.max(-45, Math.min(45, roll));
+                dom.horizonLine.style.transform = `rotate(${(-shown).toFixed(2)}deg)`;
+            }
+
+            function renderSurface() {
                 // Apply calibration offset
                 const targetBeta = state.rawBeta - state.offsetBeta;
                 const targetGamma = state.rawGamma - state.offsetGamma;
@@ -603,8 +781,6 @@
 
                 // Calculate Bubble Position inside the circular reticle
                 updateBubbleVisuals(displayGamma, displayBeta);
-
-                requestAnimationFrame(renderLoop);
             }
 
             /**
@@ -642,7 +818,7 @@
             function onLevelStateChanged(isLevel) {
                 if (isLevel) {
                     dom.body.classList.add('is-level');
-                    dom.levelStatusSub.textContent = 'LEVEL';
+                    if (state.mode === 'surface') dom.levelStatusSub.textContent = 'LEVEL';
                     dom.levelStatusSub.classList.remove('text-zinc-500');
                     dom.levelStatusSub.classList.add('text-iosGreen');
 
@@ -654,7 +830,7 @@
                     }
                 } else {
                     dom.body.classList.remove('is-level');
-                    dom.levelStatusSub.textContent = 'TILTED';
+                    if (state.mode === 'surface') dom.levelStatusSub.textContent = 'TILTED';
                     dom.levelStatusSub.classList.remove('text-iosGreen');
                     dom.levelStatusSub.classList.add('text-zinc-500');
                 }
@@ -664,6 +840,21 @@
              * Zeroes/calibrates the level to the current surface orientation
              */
             function calibrateZero() {
+                if (state.mode === 'picture') {
+                    const raw = rawPictureRoll();
+                    if (raw === null) {
+                        showMessage('Hold the phone upright against the frame to calibrate.');
+                        return;
+                    }
+                    state.offsetRoll = raw;
+                    state.pictureCalibrated = true;
+                    dom.resetCalBtn.disabled = false;
+                    showMessage(`Calibrated (Offset: ${formatSignedAngle(raw)}°)`);
+                    if (state.hapticsEnabled && navigator.vibrate) {
+                        try { navigator.vibrate([15, 30, 15]); } catch (_) {}
+                    }
+                    return;
+                }
                 state.offsetBeta = state.rawBeta;
                 state.offsetGamma = state.rawGamma;
                 state.isCalibrated = true;
@@ -680,6 +871,13 @@
              * Resets calibration offsets back to true factory 0°
              */
             function resetCalibration() {
+                if (state.mode === 'picture') {
+                    state.offsetRoll = 0;
+                    state.pictureCalibrated = false;
+                    dom.resetCalBtn.disabled = true;
+                    showMessage('Calibration reset to true horizon (0°)');
+                    return;
+                }
                 state.offsetBeta = 0;
                 state.offsetGamma = 0;
                 state.isCalibrated = false;
@@ -714,6 +912,76 @@
                 dom.simBetaSlider.value = state.rawBeta.toFixed(1);
                 dom.simGammaVal.textContent = `${formatSignedAngle(state.rawGamma)}°`;
                 dom.simBetaVal.textContent = `${formatSignedAngle(state.rawBeta)}°`;
+            }
+
+            /**
+             * Switches between Surface (phone flat) and Picture (phone upright) modes
+             */
+            function setMode(mode) {
+                state.mode = mode;
+                const picture = mode === 'picture';
+                dom.modeSurfaceBtn.classList.toggle('active', !picture);
+                dom.modePictureBtn.classList.toggle('active', picture);
+                dom.reticleArena.classList.toggle('hidden', picture);
+                dom.axisReadouts.classList.toggle('hidden', picture);
+                dom.pictureView.classList.toggle('hidden', !picture);
+                dom.pictureTip.classList.toggle('hidden', !picture);
+                dom.simBetaRow.classList.toggle('hidden', picture);
+                dom.simGammaLabel.textContent = picture ? 'Rotation (clockwise +)' : 'Left / Right (Gamma)';
+                dom.simHelp.textContent = picture
+                    ? 'Use the slider to simulate rotating the phone against a frame.'
+                    : 'Drag directly on the circle above or use the sliders below to simulate tilt.';
+                dom.resetCalBtn.disabled = picture ? !state.pictureCalibrated : !state.isCalibrated;
+                dom.feedbackMessage.textContent = picture
+                    ? 'Hold the phone upright on the edge of the picture'
+                    : 'Place device flat on a surface to measure';
+
+                // Force labels and colours to refresh for the new mode
+                state.smoothRoll = 0;
+                state.pictureLabel = '';
+                state.isLevel = null;
+                if (!picture) dom.levelStatusSub.textContent = 'TILTED';
+                try { localStorage.setItem('level-mode', mode); } catch (_) {}
+            }
+
+            function isFullscreen() {
+                return !!(document.fullscreenElement || document.webkitFullscreenElement);
+            }
+
+            function toggleFullscreen() {
+                const el = document.documentElement;
+                try {
+                    if (isFullscreen()) {
+                        (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+                        return;
+                    }
+                    const request = el.requestFullscreen || el.webkitRequestFullscreen;
+                    if (!request) {
+                        showMessage('Full screen isn’t supported here — use Add to Home Screen instead.');
+                        return;
+                    }
+                    const result = request.call(el, { navigationUI: 'hide' });
+                    if (result && result.catch) {
+                        result.catch(() => showMessage('Full screen was blocked — try Add to Home Screen.'));
+                    }
+                } catch (_) {
+                    showMessage('Full screen isn’t available here.');
+                }
+            }
+
+            function updateFullscreenIcon() {
+                const fs = isFullscreen();
+                dom.fsIconEnter.classList.toggle('hidden', fs);
+                dom.fsIconExit.classList.toggle('hidden', !fs);
+            }
+
+            // Keep the screen awake while the level is in use
+            async function keepAwake() {
+                if (state.wakeLock || !('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+                try {
+                    state.wakeLock = await navigator.wakeLock.request('screen');
+                    state.wakeLock.addEventListener('release', () => { state.wakeLock = null; });
+                } catch (_) { /* not allowed right now */ }
             }
 
             // --- Helper Functions ---
@@ -772,6 +1040,19 @@
                     dom.simBetaVal.textContent = `${formatSignedAngle(state.rawBeta)}°`;
                 });
 
+                // Mode switch
+                dom.modeSurfaceBtn.addEventListener('click', () => setMode('surface'));
+                dom.modePictureBtn.addEventListener('click', () => setMode('picture'));
+
+                // Full screen
+                dom.fullscreenBtn.addEventListener('click', toggleFullscreen);
+                document.addEventListener('fullscreenchange', updateFullscreenIcon);
+                document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
+
+                // Screen wake lock (re-acquired after the tab comes back)
+                document.addEventListener('visibilitychange', keepAwake);
+                document.addEventListener('click', keepAwake);
+
                 // Retry real sensors (a tap counts as a user gesture, so iOS can re-prompt)
                 dom.retrySensorsBtn.addEventListener('click', () => {
                     if (state.needsPermission) {
@@ -787,7 +1068,7 @@
                 });
 
                 dom.simFlattenBtn.addEventListener('click', () => {
-                    state.rawGamma = state.offsetGamma;
+                    state.rawGamma = state.mode === 'picture' ? state.offsetRoll : state.offsetGamma;
                     state.rawBeta = state.offsetBeta;
                     syncSlidersFromState();
                 });
