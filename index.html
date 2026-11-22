@@ -260,11 +260,16 @@
         <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-semibold uppercase tracking-wider text-iosGreen flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-iosGreen"></span>
-                Desktop Tilt Simulator
+                Tilt Simulator
             </span>
-            <button id="simFlattenBtn" class="text-xs font-medium px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition">
-                Center (0°)
-            </button>
+            <div class="flex items-center gap-2">
+                <button id="retrySensorsBtn" class="text-xs font-medium px-2.5 py-1 rounded-lg bg-iosGreen/15 hover:bg-iosGreen/25 text-iosGreen transition">
+                    Retry sensors
+                </button>
+                <button id="simFlattenBtn" class="text-xs font-medium px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition">
+                    Center (0°)
+                </button>
+            </div>
         </div>
         <p class="text-[11px] text-zinc-400 mb-3">Drag directly on the circle above or use the sliders below to simulate tilt.</p>
         
@@ -334,7 +339,11 @@
                 sensorActive: false,
                 simMode: false,
                 hapticsEnabled: true,
-                isDraggingReticle: false
+                isDraggingReticle: false,
+                isIOS: false,
+                listenersAttached: false,
+                sensorSource: null,
+                lastOrientationAt: -Infinity
             };
 
             // --- DOM Elements ---
@@ -364,7 +373,8 @@
                 simBetaSlider: document.getElementById('simBetaSlider'),
                 simGammaVal: document.getElementById('simGammaVal'),
                 simBetaVal: document.getElementById('simBetaVal'),
-                simFlattenBtn: document.getElementById('simFlattenBtn')
+                simFlattenBtn: document.getElementById('simFlattenBtn'),
+                retrySensorsBtn: document.getElementById('retrySensorsBtn')
             };
 
             // --- Initialization ---
@@ -375,91 +385,165 @@
             }
 
             /**
-             * Detects device capabilities and initializes either iOS permission prompt,
-             * automatic Android/mobile sensor listener, or desktop test mode fallback.
+             * Detects device capabilities and starts the right sensor path:
+             * iOS permission prompt, automatic Android/mobile listeners, or desktop Test Mode.
              */
             function detectAndStartSensors() {
                 const isSecure = window.isSecureContext;
                 const hasOrientation = 'DeviceOrientationEvent' in window;
-                const needsIOSPermission = hasOrientation && typeof DeviceOrientationEvent.requestPermission === 'function';
+                const hasMotion = 'DeviceMotionEvent' in window;
+                state.isIOS =
+                    (hasOrientation && typeof DeviceOrientationEvent.requestPermission === 'function') ||
+                    (hasMotion && typeof DeviceMotionEvent.requestPermission === 'function');
 
                 if (!isSecure && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                    enableSimulationMode(true);
                     setStatus('HTTPS Required', 'bg-red-500');
                     showMessage('Sensors require HTTPS. Switched to Test Mode.');
-                    enableSimulationMode(true);
                     return;
                 }
 
-                if (needsIOSPermission) {
-                    // iOS 13+ requires user tap to call requestPermission()
+                if (state.isIOS) {
+                    // iOS 13+ requires a user tap before requestPermission() can be called
                     dom.permissionOverlay.classList.remove('hidden');
                     setStatus('Permission Needed', 'bg-amber-400');
-                } else if (hasOrientation) {
-                    // Android / standard browsers grant access without prompt
-                    window.addEventListener('deviceorientation', handleDeviceOrientation, true);
-                    setStatus('Waiting for Sensor...', 'bg-amber-400');
-
-                    // Fallback check: If no sensor event fires within 1.5s (e.g., Desktop PC), enable Test Mode automatically
-                    setTimeout(() => {
-                        if (!state.sensorActive && !state.simMode) {
-                            setStatus('Desktop Mode', 'bg-blue-400');
-                            showMessage('No tilt sensor detected — Test Mode active.');
-                            enableSimulationMode(true);
-                        }
-                    }, 1500);
+                } else if (hasOrientation || hasMotion) {
+                    // Android / standard browsers: no prompt, data just starts flowing (or doesn't)
+                    attachSensorListeners();
+                    scheduleSensorCheck();
                 } else {
-                    setStatus('Desktop Mode', 'bg-blue-400');
                     enableSimulationMode(true);
+                    setStatus('Desktop Mode', 'bg-blue-400');
                 }
             }
 
             /**
-             * Requests sensor access on iOS devices via user gesture
+             * Listens on every tilt source the browser might offer. Orientation is preferred;
+             * the raw accelerometer (devicemotion) is a fallback used only when orientation is silent.
+             */
+            function attachSensorListeners() {
+                if (!state.listenersAttached) {
+                    state.listenersAttached = true;
+                    window.addEventListener('deviceorientation', handleDeviceOrientation, true);
+                    window.addEventListener('deviceorientationabsolute', handleDeviceOrientation, true);
+                    window.addEventListener('devicemotion', handleDeviceMotion, true);
+                }
+                setStatus('Waiting for Sensor...', 'bg-amber-400 animate-pulse');
+            }
+
+            /**
+             * If no usable tilt data arrives within 2s, explain why (when the browser can tell us)
+             * and fall back to Test Mode. Real data arriving later switches Test Mode off again.
+             */
+            function scheduleSensorCheck() {
+                clearTimeout(scheduleSensorCheck._timer);
+                scheduleSensorCheck._timer = setTimeout(async () => {
+                    if (state.sensorActive) return;
+                    const blocked = await sensorsBlocked();
+                    if (state.sensorActive) return;
+                    enableSimulationMode(true);
+                    if (blocked) {
+                        setStatus('Sensors Blocked', 'bg-red-500');
+                        showMessage('Motion sensors are blocked for this site. Allow them, then tap Retry sensors.');
+                    } else {
+                        setStatus('No Sensor Data', 'bg-blue-400');
+                        showMessage('No tilt data received. Test Mode active — tap Retry sensors to try again.');
+                    }
+                }, 2000);
+            }
+
+            /**
+             * Asks the Permissions API (Chrome) whether motion sensors are denied for this site.
+             */
+            async function sensorsBlocked() {
+                if (!navigator.permissions || !navigator.permissions.query) return false;
+                for (const name of ['accelerometer', 'gyroscope']) {
+                    try {
+                        const result = await navigator.permissions.query({ name });
+                        if (result.state === 'denied') return true;
+                    } catch (_) { /* name unsupported in this browser */ }
+                }
+                return false;
+            }
+
+            /**
+             * Requests motion + orientation access on iOS via a user gesture
              */
             async function requestIOSPermission() {
-                try {
-                    const response = await DeviceOrientationEvent.requestPermission();
-                    if (response === 'granted') {
-                        dom.permissionOverlay.classList.add('hidden');
-                        window.addEventListener('deviceorientation', handleDeviceOrientation, true);
-                        setStatus('Sensor Active', 'bg-iosGreen');
-                        showMessage('Sensors enabled. Place device flat to measure.');
-                    } else {
-                        dom.permissionOverlay.classList.add('hidden');
-                        showMessage('Permission denied. Using Test Mode instead.');
-                        enableSimulationMode(true);
-                    }
-                } catch (err) {
-                    console.error('Orientation permission error:', err);
-                    dom.permissionOverlay.classList.add('hidden');
-                    showMessage('Sensor unavailable. Switched to Test Mode.');
+                const requests = [];
+                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    requests.push(DeviceOrientationEvent.requestPermission().catch(() => 'denied'));
+                }
+                if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                    requests.push(DeviceMotionEvent.requestPermission().catch(() => 'denied'));
+                }
+                const results = await Promise.all(requests);
+                dom.permissionOverlay.classList.add('hidden');
+
+                if (results.includes('granted')) {
+                    attachSensorListeners();
+                    scheduleSensorCheck();
+                    showMessage('Sensors enabled. Place device flat to measure.');
+                } else {
                     enableSimulationMode(true);
+                    setStatus('Permission Denied', 'bg-red-500');
+                    showMessage('Motion access denied. Using Test Mode instead.');
                 }
             }
 
             /**
-             * Handles incoming raw DeviceOrientation events
+             * Primary source: DeviceOrientation (beta/gamma in degrees)
              */
             function handleDeviceOrientation(event) {
-                if (event.beta === null || event.gamma === null) return;
+                if (event.beta == null || event.gamma == null) return;
+                state.lastOrientationAt = performance.now();
+                applyTilt(event.beta, event.gamma, 'Orientation');
+            }
 
-                if (!state.sensorActive) {
+            /**
+             * Fallback source: derive tilt from the gravity vector reported by the accelerometer.
+             * Skipped whenever orientation data has arrived in the last 500ms.
+             */
+            function handleDeviceMotion(event) {
+                if (performance.now() - state.lastOrientationAt < 500) return;
+                const g = event.accelerationIncludingGravity;
+                if (!g || g.x == null || g.y == null || g.z == null) return;
+
+                // iOS reports the gravity vector with the opposite sign to Android/Chrome
+                const sign = state.isIOS ? -1 : 1;
+                const ax = g.x * sign, ay = g.y * sign, az = g.z * sign;
+                if (Math.hypot(ax, ay, az) < 1) return; // no meaningful gravity reading
+
+                const toDeg = 180 / Math.PI;
+                const beta = Math.atan2(ay, az) * toDeg;                     // front/back
+                const gamma = Math.atan2(-ax, Math.hypot(ay, az)) * toDeg;   // left/right
+                applyTilt(beta, gamma, 'Accelerometer');
+            }
+
+            /**
+             * Shared path for both sources: activation, screen rotation, and state update
+             */
+            function applyTilt(rawBeta, rawGamma, source) {
+                if (!state.sensorActive || state.sensorSource !== source) {
+                    const firstReading = !state.sensorActive;
                     state.sensorActive = true;
-                    // If user had simulation open before real sensor fired, turn off simulation
-                    if (state.simMode) {
+                    state.sensorSource = source;
+                    clearTimeout(scheduleSensorCheck._timer);
+                    // Real data arrived after an automatic fallback: leave Test Mode
+                    if (firstReading && state.simMode) {
                         enableSimulationMode(false);
                     }
-                    setStatus('Sensor Active', 'bg-iosGreen');
+                    if (!state.simMode) setStatus(`Sensor Active · ${source}`, 'bg-iosGreen');
                 }
 
-                // Ignore sensor updates while user is actively using Test Mode
+                // Ignore sensor updates while the user is actively using Test Mode
                 if (state.simMode) return;
 
-                // Clamp beta and gamma to reasonable flat-surface tilt range (-90 to 90)
-                let beta = Math.max(-90, Math.min(90, event.beta));
-                let gamma = Math.max(-90, Math.min(90, event.gamma));
+                // Clamp to a reasonable flat-surface tilt range (-90 to 90)
+                let beta = Math.max(-90, Math.min(90, rawBeta));
+                let gamma = Math.max(-90, Math.min(90, rawGamma));
 
-                // Account for screen orientation angle if rotated (landscape vs portrait)
+                // Account for screen rotation (landscape vs portrait)
                 const screenAngle = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
                 if (screenAngle === 90) {
                     const temp = beta;
@@ -615,7 +699,7 @@
                     dom.simToggleBtn.classList.remove('border-iosGreen', 'text-iosGreen');
                     dom.simToggleLabel.textContent = 'Test Mode';
                     if (state.sensorActive) {
-                        setStatus('Sensor Active', 'bg-iosGreen');
+                        setStatus(`Sensor Active · ${state.sensorSource}`, 'bg-iosGreen');
                     }
                 }
             }
@@ -681,6 +765,20 @@
                 dom.simBetaSlider.addEventListener('input', (e) => {
                     state.rawBeta = parseFloat(e.target.value);
                     dom.simBetaVal.textContent = `${formatSignedAngle(state.rawBeta)}°`;
+                });
+
+                // Retry real sensors (a tap counts as a user gesture, so iOS can re-prompt)
+                dom.retrySensorsBtn.addEventListener('click', () => {
+                    if (state.isIOS) {
+                        requestIOSPermission();
+                        return;
+                    }
+                    state.sensorActive = false;
+                    state.sensorSource = null;
+                    enableSimulationMode(false);
+                    attachSensorListeners();
+                    showMessage('Listening for tilt data…');
+                    scheduleSensorCheck();
                 });
 
                 dom.simFlattenBtn.addEventListener('click', () => {
