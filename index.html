@@ -241,6 +241,9 @@
             <button id="modeSurfaceBtn" class="mode-btn active">Surface</button>
             <button id="modePictureBtn" class="mode-btn">Picture</button>
         </div>
+        <button id="smoothBtn" title="Smoothing strength" class="ml-2 px-3 rounded-full bg-zinc-900/90 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-white active:scale-95 transition">
+            Smooth: <span id="smoothLabel" class="text-white">Med</span>
+        </button>
     </nav>
 
     <!-- Main Center Spirit Level Display -->
@@ -404,7 +407,16 @@
             // --- Configuration Constants ---
             const LEVEL_THRESHOLD_DEG = 0.5;     // ±0.5° triggers level green state
             const MAX_DISPLAY_ANGLE = 45.0;      // Clamp visual travel at 45 degrees
-            const SMOOTHING_FACTOR = 0.16;
+            // Adaptive "One Euro" smoothing: heavy when still, light when moving.
+            //   minCutoff (Hz): lower = steadier when holding still
+            //   beta: how quickly smoothing relaxes as the phone moves faster
+            const SMOOTHING_PRESETS = {
+                low:  { label: 'Low',  minCutoff: 0.6,  beta: 0.05 },
+                med:  { label: 'Med',  minCutoff: 0.2,  beta: 0.03 },
+                high: { label: 'High', minCutoff: 0.08, beta: 0.015 }
+            };
+            const SMOOTHING_ORDER = ['low', 'med', 'high'];
+            const LEVEL_EXIT_FACTOR = 1.6;      // hysteresis: must drift 1.6× past the threshold to leave LEVEL
             const PICTURE_THRESHOLD_DEG = 0.3;  // tighter tolerance for hanging pictures
             const UPRIGHT_LIMIT = 0.85;         // |gravity z| above this = phone is lying too flat for Picture mode       // Low-pass filter alpha (lower = smoother, higher = snappier)
 
@@ -436,8 +448,36 @@
                 smoothRoll: 0,
                 pictureCalibrated: false,
                 pictureLabel: '',
-                wakeLock: null
+                wakeLock: null,
+                smoothing: 'med'
             };
+
+            /**
+             * One Euro filter (Casiez et al., 2012): a low-pass filter whose cutoff rises
+             * with the signal's speed, so it removes jitter without adding lag to real moves.
+             */
+            function makeOneEuro() {
+                let x = null, dx = 0, lastT = null;
+                const alpha = (cutoff, dt) => {
+                    const tau = 1 / (2 * Math.PI * cutoff);
+                    return 1 / (1 + tau / dt);
+                };
+                return {
+                    filter(value, t) {
+                        const p = SMOOTHING_PRESETS[state.smoothing];
+                        if (x === null || lastT === null) { x = value; lastT = t; dx = 0; return x; }
+                        const dt = Math.min(Math.max(t - lastT, 1 / 240), 0.25);
+                        lastT = t;
+                        const rawDx = (value - x) / dt;
+                        dx += alpha(1.0, dt) * (rawDx - dx);
+                        const cutoff = p.minCutoff + p.beta * Math.abs(dx);
+                        x += alpha(cutoff, dt) * (value - x);
+                        return x;
+                    },
+                    reset() { x = null; lastT = null; dx = 0; }
+                };
+            }
+            const filters = { beta: makeOneEuro(), gamma: makeOneEuro(), roll: makeOneEuro() };
 
             // --- DOM Elements ---
             const dom = {
@@ -479,7 +519,9 @@
                 axisReadouts: document.getElementById('axisReadouts'),
                 simHelp: document.getElementById('simHelp'),
                 simGammaLabel: document.getElementById('simGammaLabel'),
-                simBetaRow: document.getElementById('simBetaRow')
+                simBetaRow: document.getElementById('simBetaRow'),
+                smoothBtn: document.getElementById('smoothBtn'),
+                smoothLabel: document.getElementById('smoothLabel')
             };
 
             // --- Initialization ---
@@ -490,6 +532,9 @@
                 let savedMode = 'surface';
                 try { savedMode = localStorage.getItem('level-mode') || 'surface'; } catch (_) {}
                 setMode(savedMode === 'picture' ? 'picture' : 'surface');
+                let savedSmoothing = 'med';
+                try { savedSmoothing = localStorage.getItem('level-smoothing') || 'med'; } catch (_) {}
+                setSmoothing(savedSmoothing);
                 keepAwake();
                 detectAndStartSensors();
                 requestAnimationFrame(renderLoop);
@@ -691,10 +736,11 @@
              * level threshold checks, and updates DOM positions cleanly.
              */
             function renderLoop() {
+                const t = performance.now() / 1000;
                 if (state.mode === 'picture') {
-                    renderPicture();
+                    renderPicture(t);
                 } else {
-                    renderSurface();
+                    renderSurface(t);
                 }
                 requestAnimationFrame(renderLoop);
             }
@@ -719,15 +765,16 @@
                 return phi - 90 * Math.round(phi / 90);
             }
 
-            function renderPicture() {
+            function renderPicture(t) {
                 const raw = rawPictureRoll();
                 const flat = raw === null;
                 if (!flat) {
                     const target = raw - state.offsetRoll;
-                    state.smoothRoll += (target - state.smoothRoll) * SMOOTHING_FACTOR;
+                    state.smoothRoll = filters.roll.filter(target, t);
                 }
                 const roll = Math.abs(state.smoothRoll) < 0.03 ? 0 : state.smoothRoll;
-                const nowLevel = !flat && Math.abs(roll) <= PICTURE_THRESHOLD_DEG;
+                const pictureLimit = PICTURE_THRESHOLD_DEG * (state.isLevel ? LEVEL_EXIT_FACTOR : 1);
+                const nowLevel = !flat && Math.abs(roll) <= pictureLimit;
 
                 if (nowLevel !== state.isLevel) {
                     state.isLevel = nowLevel;
@@ -749,14 +796,14 @@
                 dom.horizonLine.style.transform = `rotate(${(-shown).toFixed(2)}deg)`;
             }
 
-            function renderSurface() {
+            function renderSurface(t) {
                 // Apply calibration offset
                 const targetBeta = state.rawBeta - state.offsetBeta;
                 const targetGamma = state.rawGamma - state.offsetGamma;
 
                 // Low-pass filter to eliminate sensor jitter
-                state.smoothBeta += (targetBeta - state.smoothBeta) * SMOOTHING_FACTOR;
-                state.smoothGamma += (targetGamma - state.smoothGamma) * SMOOTHING_FACTOR;
+                state.smoothBeta = filters.beta.filter(targetBeta, t);
+                state.smoothGamma = filters.gamma.filter(targetGamma, t);
 
                 // Snap tiny floating-point noise to 0 when extremely close
                 const displayBeta = Math.abs(state.smoothBeta) < 0.03 ? 0 : state.smoothBeta;
@@ -767,7 +814,8 @@
                 const roundedTotal = Math.round(totalAngle);
 
                 // Check if within ±0.5° level tolerance
-                const nowLevel = Math.abs(displayBeta) <= LEVEL_THRESHOLD_DEG && Math.abs(displayGamma) <= LEVEL_THRESHOLD_DEG;
+                const surfaceLimit = LEVEL_THRESHOLD_DEG * (state.isLevel ? LEVEL_EXIT_FACTOR : 1);
+                const nowLevel = Math.abs(displayBeta) <= surfaceLimit && Math.abs(displayGamma) <= surfaceLimit;
 
                 if (nowLevel !== state.isLevel) {
                     state.isLevel = nowLevel;
@@ -938,10 +986,17 @@
 
                 // Force labels and colours to refresh for the new mode
                 state.smoothRoll = 0;
+                filters.roll.reset();
                 state.pictureLabel = '';
                 state.isLevel = null;
                 if (!picture) dom.levelStatusSub.textContent = 'TILTED';
                 try { localStorage.setItem('level-mode', mode); } catch (_) {}
+            }
+
+            function setSmoothing(level) {
+                state.smoothing = SMOOTHING_PRESETS[level] ? level : 'med';
+                dom.smoothLabel.textContent = SMOOTHING_PRESETS[state.smoothing].label;
+                try { localStorage.setItem('level-smoothing', state.smoothing); } catch (_) {}
             }
 
             function isFullscreen() {
@@ -1038,6 +1093,13 @@
                 dom.simBetaSlider.addEventListener('input', (e) => {
                     state.rawBeta = parseFloat(e.target.value);
                     dom.simBetaVal.textContent = `${formatSignedAngle(state.rawBeta)}°`;
+                });
+
+                // Smoothing strength (cycles Low → Med → High)
+                dom.smoothBtn.addEventListener('click', () => {
+                    const i = SMOOTHING_ORDER.indexOf(state.smoothing);
+                    setSmoothing(SMOOTHING_ORDER[(i + 1) % SMOOTHING_ORDER.length]);
+                    showMessage(`Smoothing: ${SMOOTHING_PRESETS[state.smoothing].label}`);
                 });
 
                 // Mode switch
