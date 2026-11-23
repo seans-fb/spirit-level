@@ -1,7 +1,8 @@
 {
-  "name": "Level",
+  "id": "./",
+  "name": "Level — Precision Spirit Level",
   "short_name": "Level",
-  "description": "Precision spirit level for surfaces and pictures",
+  "description": "Precision spirit level for surfaces and hanging pictures",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
@@ -12,18 +13,33 @@
   "orientation": "any",
   "background_color": "#000000",
   "theme_color": "#000000",
+  "categories": [
+    "utilities"
+  ],
   "icons": [
     {
       "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

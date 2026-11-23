@@ -184,9 +184,9 @@
 
         /* Settings sheet slides up */
         @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        #settingsSheet:not(.hidden) .sheet-panel { animation: sheetUp 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+        .sheet:not(.hidden) .sheet-panel { animation: sheetUp 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
         @media (prefers-reduced-motion: reduce) {
-            #settingsSheet:not(.hidden) .sheet-panel { animation: none; }
+            .sheet:not(.hidden) .sheet-panel { animation: none; }
         }
 
         /* Short landscape screens (phone on its side, full screen) */
@@ -237,6 +237,13 @@
         </div>
 
         <div class="flex items-center gap-2">
+            <!-- Share / QR Button -->
+            <button id="shareBtn" title="Share" aria-label="Share this app" class="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-300 hover:text-white active:scale-95 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2M14 18v2M18 18h2v2h-2" />
+                </svg>
+            </button>
+
             <!-- Full Screen Toggle Button -->
             <button id="fullscreenBtn" title="Full screen" class="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-300 hover:text-white active:scale-95 transition">
                 <svg id="fsIconEnter" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -411,8 +418,39 @@
         </div>
     </footer>
 
+    <!-- Share Sheet (QR code + install) -->
+    <div id="shareSheet" class="sheet hidden fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Share">
+        <div class="sheet-backdrop absolute inset-0 bg-black/60"></div>
+        <div class="sheet-panel absolute inset-x-0 bottom-0 mx-auto w-full max-w-md bg-zinc-900 border border-zinc-800 border-b-0 rounded-t-3xl px-5 pt-3 pb-8 max-h-[90vh] overflow-y-auto">
+            <div class="w-10 h-1 rounded-full bg-zinc-700 mx-auto mb-3"></div>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-base font-semibold text-white">Share Level</h2>
+                <button class="sheet-close p-2 -mr-2 rounded-full text-zinc-400 hover:text-white transition" aria-label="Close">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+
+            <div class="mx-auto w-52 p-2 rounded-2xl bg-white">
+                <svg shape-rendering="crispEdges" role="img" aria-label="QR code for seans-fb.github.io/spirit-level" class="block w-full h-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 33 33" class="segno"><path fill="#fff" d="M0 0h33v33h-33z"/><path class="qrline" stroke="#000" d="M2 2.5h7m1 0h2m1 0h3m3 0h2m3 0h7m-29 1h1m5 0h1m1 0h3m5 0h4m2 0h1m5 0h1m-29 1h1m1 0h3m1 0h1m1 0h4m1 0h1m1 0h1m2 0h3m1 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m4 0h1m1 0h1m2 0h3m3 0h1m1 0h3m1 0h1m-29 1h1m1 0h3m1 0h1m1 0h2m1 0h1m2 0h1m1 0h1m1 0h2m2 0h1m1 0h3m1 0h1m-29 1h1m5 0h1m2 0h4m1 0h1m1 0h1m5 0h1m5 0h1m-29 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-18 1h3m2 0h1m1 0h3m-21 1h1m2 0h6m2 0h1m2 0h1m1 0h2m3 0h1m2 0h1m1 0h3m-29 1h1m1 0h1m2 0h1m1 0h1m1 0h2m1 0h4m1 0h3m1 0h1m1 0h2m1 0h2m-26 1h7m2 0h2m2 0h4m1 0h2m1 0h1m2 0h1m-23 1h2m1 0h1m2 0h1m1 0h1m4 0h1m2 0h2m3 0h1m2 0h1m-28 1h2m2 0h7m2 0h1m1 0h1m2 0h1m1 0h3m4 0h1m-26 1h2m2 0h1m1 0h1m4 0h2m1 0h2m3 0h7m-29 1h3m1 0h1m1 0h1m1 0h1m3 0h1m1 0h4m1 0h2m2 0h2m1 0h1m1 0h1m-27 1h2m1 0h1m1 0h1m1 0h2m1 0h1m7 0h3m1 0h1m1 0h1m1 0h1m-29 1h2m1 0h2m1 0h1m2 0h2m1 0h1m1 0h3m1 0h3m2 0h1m1 0h1m-26 1h2m5 0h1m2 0h3m2 0h1m2 0h3m3 0h1m1 0h2m-28 1h2m3 0h2m1 0h2m1 0h5m3 0h1m2 0h1m1 0h2m2 0h1m-29 1h2m1 0h3m2 0h3m2 0h2m7 0h5m-27 1h2m1 0h2m1 0h2m2 0h4m2 0h2m1 0h9m-20 1h2m1 0h5m4 0h1m3 0h2m-26 1h7m1 0h3m1 0h2m1 0h1m2 0h3m1 0h1m1 0h2m-26 1h1m5 0h1m1 0h1m1 0h4m1 0h3m1 0h2m3 0h1m3 0h1m-29 1h1m1 0h3m1 0h1m1 0h3m2 0h1m1 0h1m3 0h7m1 0h1m-28 1h1m1 0h3m1 0h1m1 0h1m3 0h1m1 0h3m2 0h1m1 0h1m6 0h1m-29 1h1m1 0h3m1 0h1m3 0h1m2 0h1m1 0h1m2 0h1m1 0h2m1 0h2m1 0h3m-29 1h1m5 0h1m3 0h4m2 0h1m1 0h1m3 0h2m1 0h2m1 0h1m-29 1h7m1 0h1m1 0h1m1 0h2m6 0h6"/></svg>
+            </div>
+            <p class="text-center text-xs text-zinc-400 mt-3">Scan with another phone's camera</p>
+            <p id="shareUrl" class="text-center text-sm text-white font-medium mt-1 select-text">seans-fb.github.io/spirit-level</p>
+
+            <div class="flex gap-3 mt-5">
+                <button id="nativeShareBtn" class="hidden flex-1 py-3 px-4 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white font-medium text-sm active:scale-[0.98] transition">Share…</button>
+                <button id="copyLinkBtn" class="flex-1 py-3 px-4 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white font-medium text-sm active:scale-[0.98] transition">Copy link</button>
+            </div>
+
+            <!-- Install (PWA) -->
+            <div id="installSection" class="mt-5 pt-5 border-t border-zinc-800">
+                <button id="installBtn" class="hidden w-full py-3 px-4 rounded-2xl bg-iosGreen text-black font-semibold text-sm active:scale-[0.98] transition">Install app</button>
+                <p id="installHint" class="text-xs text-zinc-400 text-center leading-relaxed">To install, open your browser menu and choose <span class="text-white">Add to Home screen</span> or <span class="text-white">Install app</span>.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Settings Sheet (gear menu) -->
-    <div id="settingsSheet" class="hidden fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Settings">
+    <div id="settingsSheet" class="sheet hidden fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Settings">
         <div id="settingsBackdrop" class="absolute inset-0 bg-black/60"></div>
         <div class="sheet-panel absolute inset-x-0 bottom-0 mx-auto w-full max-w-md bg-zinc-900 border border-zinc-800 border-b-0 rounded-t-3xl px-5 pt-3 pb-8 max-h-[90vh] overflow-y-auto">
             <div class="w-10 h-1 rounded-full bg-zinc-700 mx-auto mb-3"></div>
@@ -573,6 +611,13 @@
                 simToggleBtn: document.getElementById('simToggleBtn'),
                 settingsBtn: document.getElementById('settingsBtn'),
                 settingsSheet: document.getElementById('settingsSheet'),
+                shareBtn: document.getElementById('shareBtn'),
+                shareSheet: document.getElementById('shareSheet'),
+                nativeShareBtn: document.getElementById('nativeShareBtn'),
+                copyLinkBtn: document.getElementById('copyLinkBtn'),
+                installBtn: document.getElementById('installBtn'),
+                installHint: document.getElementById('installHint'),
+                installSection: document.getElementById('installSection'),
                 settingsBackdrop: document.getElementById('settingsBackdrop'),
                 settingsCloseBtn: document.getElementById('settingsCloseBtn'),
                 calHelp: document.getElementById('calHelp'),
@@ -614,6 +659,8 @@
                 try { state.hapticsEnabled = localStorage.getItem('level-haptics') !== '0'; } catch (_) {}
                 setSwitch(dom.hapticToggleBtn, state.hapticsEnabled);
                 keepAwake();
+                updateInstallUI();
+                registerServiceWorker();
                 detectAndStartSensors();
                 requestAnimationFrame(renderLoop);
             }
@@ -1089,6 +1136,58 @@
                 dom.calChip.classList.toggle('hidden', !calibrated);
             }
 
+            const SHARE_URL = 'https://seans-fb.github.io/spirit-level/';
+            let deferredInstallPrompt = null;
+
+            function isInstalled() {
+                return window.matchMedia('(display-mode: standalone)').matches ||
+                    window.matchMedia('(display-mode: fullscreen)').matches ||
+                    navigator.standalone === true;
+            }
+
+            function updateInstallUI() {
+                const installed = isInstalled();
+                dom.installSection.classList.toggle('hidden', installed);
+                dom.installBtn.classList.toggle('hidden', !deferredInstallPrompt);
+                if (state.isIOS) {
+                    dom.installHint.innerHTML = 'To install, tap <span class="text-white">Share</span> in Safari, then <span class="text-white">Add to Home Screen</span>.';
+                }
+                dom.installHint.classList.toggle('hidden', !!deferredInstallPrompt);
+                // An installed app already opens full screen
+                dom.fullscreenBtn.classList.toggle('hidden', window.matchMedia('(display-mode: fullscreen)').matches);
+            }
+
+            function openShare() {
+                dom.nativeShareBtn.classList.toggle('hidden', !navigator.share);
+                updateInstallUI();
+                dom.shareSheet.classList.remove('hidden');
+            }
+
+            function closeShare() {
+                dom.shareSheet.classList.add('hidden');
+            }
+
+            async function copyLink() {
+                try {
+                    await navigator.clipboard.writeText(SHARE_URL);
+                    dom.copyLinkBtn.textContent = 'Copied ✓';
+                } catch (_) {
+                    // Fallback: select the visible link so it can be copied manually
+                    const range = document.createRange();
+                    range.selectNodeContents(document.getElementById('shareUrl'));
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                    dom.copyLinkBtn.textContent = 'Link selected';
+                }
+                setTimeout(() => { dom.copyLinkBtn.textContent = 'Copy link'; }, 2000);
+            }
+
+            function registerServiceWorker() {
+                if (!('serviceWorker' in navigator)) return;
+                navigator.serviceWorker.register('sw.js').catch(err => console.warn('Service worker failed:', err));
+            }
+
             function openSettings() {
                 dom.settingsSheet.classList.remove('hidden');
             }
@@ -1175,7 +1274,36 @@
                 dom.settingsBtn.addEventListener('click', openSettings);
                 dom.settingsBackdrop.addEventListener('click', closeSettings);
                 dom.settingsCloseBtn.addEventListener('click', closeSettings);
-                document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSettings(); });
+                document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeSettings(); closeShare(); } });
+
+                // Share sheet
+                dom.shareBtn.addEventListener('click', openShare);
+                dom.shareSheet.querySelector('.sheet-backdrop').addEventListener('click', closeShare);
+                dom.shareSheet.querySelector('.sheet-close').addEventListener('click', closeShare);
+                dom.copyLinkBtn.addEventListener('click', copyLink);
+                dom.nativeShareBtn.addEventListener('click', () => {
+                    navigator.share({ title: 'Level', text: 'Precision spirit level for surfaces and pictures', url: SHARE_URL })
+                        .catch(() => { /* user cancelled */ });
+                });
+
+                // Install (PWA)
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    deferredInstallPrompt = e;
+                    updateInstallUI();
+                });
+                window.addEventListener('appinstalled', () => {
+                    deferredInstallPrompt = null;
+                    updateInstallUI();
+                    showMessage('Level installed — open it from your home screen.');
+                });
+                dom.installBtn.addEventListener('click', async () => {
+                    if (!deferredInstallPrompt) return;
+                    deferredInstallPrompt.prompt();
+                    try { await deferredInstallPrompt.userChoice; } catch (_) {}
+                    deferredInstallPrompt = null;
+                    updateInstallUI();
+                });
 
                 // Haptic Feedback Toggle
                 dom.hapticToggleBtn.addEventListener('click', () => {
