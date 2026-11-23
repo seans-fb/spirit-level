@@ -157,6 +157,38 @@
             box-shadow: 0 0 18px rgba(48, 209, 88, 0.8);
         }
 
+        /* Toggle switches in the settings sheet */
+        .switch {
+            position: relative;
+            flex: none;
+            width: 46px;
+            height: 28px;
+            border-radius: 999px;
+            background: #3a3a3c;
+            transition: background-color 0.2s ease;
+        }
+        .switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+            transition: transform 0.2s ease;
+        }
+        .switch.on { background: #30D158; }
+        .switch.on::after { transform: translateX(18px); }
+
+        /* Settings sheet slides up */
+        @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        #settingsSheet:not(.hidden) .sheet-panel { animation: sheetUp 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+        @media (prefers-reduced-motion: reduce) {
+            #settingsSheet:not(.hidden) .sheet-panel { animation: none; }
+        }
+
         /* Short landscape screens (phone on its side, full screen) */
         @media (max-height: 520px) {
             #totalDegreeDisplay { font-size: 3.25rem; line-height: 1; }
@@ -215,22 +247,12 @@
                 </svg>
             </button>
 
-            <!-- Haptic Toggle Button -->
-            <button id="hapticToggleBtn" title="Toggle Haptic Vibration" class="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-300 hover:text-white active:scale-95 transition">
-                <svg id="hapticIconOn" class="w-4 h-4 text-iosGreen" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z" />
+            <!-- Settings (gear) Button -->
+            <button id="settingsBtn" title="Settings" aria-label="Settings" class="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-300 hover:text-white active:scale-95 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <svg id="hapticIconOff" class="w-4 h-4 text-zinc-500 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                </svg>
-            </button>
-
-            <!-- Simulation Mode Toggle Button -->
-            <button id="simToggleBtn" class="px-3 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-white hover:border-zinc-600 active:scale-95 transition flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-                <span id="simToggleLabel">Test Mode</span>
             </button>
         </div>
     </header>
@@ -241,9 +263,6 @@
             <button id="modeSurfaceBtn" class="mode-btn active">Surface</button>
             <button id="modePictureBtn" class="mode-btn">Picture</button>
         </div>
-        <button id="smoothBtn" title="Smoothing strength" class="ml-2 px-3 rounded-full bg-zinc-900/90 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-white active:scale-95 transition">
-            Smooth: <span id="smoothLabel" class="text-white">Med</span>
-        </button>
     </nav>
 
     <!-- Main Center Spirit Level Display -->
@@ -374,19 +393,14 @@
         </div>
     </section>
 
-    <!-- Bottom Calibration Controls -->
+    <!-- Bottom: calibration indicator + status message -->
     <footer class="w-full max-w-md pt-2 pb-2 z-10">
-        <div class="flex items-center gap-3">
-            <button id="calibrateBtn" class="flex-1 py-3.5 px-4 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition shadow-lg">
-                <svg class="w-4 h-4 text-iosGreen" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                <span>Zero / Calibrate</span>
-            </button>
-
-            <button id="resetCalBtn" disabled class="py-3.5 px-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 text-zinc-400 hover:text-white disabled:opacity-35 disabled:pointer-events-none font-medium text-sm active:scale-[0.98] transition">
-                Reset
-            </button>
+        <div id="calChip" class="hidden mb-1.5 flex justify-center">
+            <span class="inline-flex items-center gap-2 pl-3 pr-1 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-300">
+                <span class="w-1.5 h-1.5 rounded-full bg-iosGreen"></span>
+                Calibrated offset active
+                <button id="calChipReset" class="px-2.5 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-medium transition">Reset</button>
+            </span>
         </div>
 
         <!-- Calibration Offset Indicator & Toast Message -->
@@ -396,6 +410,66 @@
             </p>
         </div>
     </footer>
+
+    <!-- Settings Sheet (gear menu) -->
+    <div id="settingsSheet" class="hidden fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Settings">
+        <div id="settingsBackdrop" class="absolute inset-0 bg-black/60"></div>
+        <div class="sheet-panel absolute inset-x-0 bottom-0 mx-auto w-full max-w-md bg-zinc-900 border border-zinc-800 border-b-0 rounded-t-3xl px-5 pt-3 pb-8 max-h-[90vh] overflow-y-auto">
+            <div class="w-10 h-1 rounded-full bg-zinc-700 mx-auto mb-3"></div>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-base font-semibold text-white">Settings</h2>
+                <button id="settingsCloseBtn" aria-label="Close settings" class="p-2 -mr-2 rounded-full text-zinc-400 hover:text-white transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+
+            <!-- Calibration -->
+            <section class="mb-5">
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1">Calibration</div>
+                <p id="calHelp" class="text-xs text-zinc-400 mb-3">Put the phone on a surface you know is level, then tap Zero.</p>
+                <div class="flex items-center gap-3">
+                    <button id="calibrateBtn" class="flex-1 py-3 px-4 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition">
+                        <svg class="w-4 h-4 text-iosGreen" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span>Zero / Calibrate</span>
+                    </button>
+                    <button id="resetCalBtn" disabled class="py-3 px-4 rounded-2xl bg-zinc-800/60 text-zinc-300 hover:text-white disabled:opacity-35 disabled:pointer-events-none font-medium text-sm active:scale-[0.98] transition">
+                        Reset
+                    </button>
+                </div>
+            </section>
+
+            <!-- Smoothing -->
+            <section class="mb-5">
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">Smoothing</div>
+                <div class="flex p-1 rounded-full bg-black/40 border border-zinc-800">
+                    <button class="smooth-btn mode-btn flex-1" data-smooth="low">Low</button>
+                    <button class="smooth-btn mode-btn flex-1" data-smooth="med">Med</button>
+                    <button class="smooth-btn mode-btn flex-1" data-smooth="high">High</button>
+                </div>
+                <p class="text-xs text-zinc-500 mt-2">High is steadiest — good for hanging pictures.</p>
+            </section>
+
+            <!-- Toggles -->
+            <section class="divide-y divide-zinc-800 border-y border-zinc-800">
+                <div class="flex items-center justify-between py-3">
+                    <div>
+                        <div class="text-sm text-white">Haptic feedback</div>
+                        <div class="text-xs text-zinc-500">Buzz when the phone reaches level</div>
+                    </div>
+                    <button id="hapticToggleBtn" role="switch" aria-checked="true" aria-label="Haptic feedback" class="switch on"></button>
+                </div>
+                <div class="flex items-center justify-between py-3">
+                    <div>
+                        <div class="text-sm text-white">Test mode</div>
+                        <div class="text-xs text-zinc-500">Simulate tilt with sliders instead of sensors</div>
+                    </div>
+                    <button id="simToggleBtn" role="switch" aria-checked="false" aria-label="Test mode" class="switch"></button>
+                </div>
+            </section>
+        </div>
+    </div>
 
     <script>
         /**
@@ -415,7 +489,6 @@
                 med:  { label: 'Med',  minCutoff: 0.2,  beta: 0.03 },
                 high: { label: 'High', minCutoff: 0.08, beta: 0.015 }
             };
-            const SMOOTHING_ORDER = ['low', 'med', 'high'];
             const LEVEL_EXIT_FACTOR = 1.6;      // hysteresis: must drift 1.6× past the threshold to leave LEVEL
             const PICTURE_THRESHOLD_DEG = 0.3;  // tighter tolerance for hanging pictures
             const UPRIGHT_LIMIT = 0.85;         // |gravity z| above this = phone is lying too flat for Picture mode       // Low-pass filter alpha (lower = smoother, higher = snappier)
@@ -497,10 +570,15 @@
                 resetCalBtn: document.getElementById('resetCalBtn'),
                 feedbackMessage: document.getElementById('feedbackMessage'),
                 hapticToggleBtn: document.getElementById('hapticToggleBtn'),
-                hapticIconOn: document.getElementById('hapticIconOn'),
-                hapticIconOff: document.getElementById('hapticIconOff'),
                 simToggleBtn: document.getElementById('simToggleBtn'),
-                simToggleLabel: document.getElementById('simToggleLabel'),
+                settingsBtn: document.getElementById('settingsBtn'),
+                settingsSheet: document.getElementById('settingsSheet'),
+                settingsBackdrop: document.getElementById('settingsBackdrop'),
+                settingsCloseBtn: document.getElementById('settingsCloseBtn'),
+                calHelp: document.getElementById('calHelp'),
+                calChip: document.getElementById('calChip'),
+                calChipReset: document.getElementById('calChipReset'),
+                smoothBtns: document.querySelectorAll('.smooth-btn'),
                 simulationPanel: document.getElementById('simulationPanel'),
                 simGammaSlider: document.getElementById('simGammaSlider'),
                 simBetaSlider: document.getElementById('simBetaSlider'),
@@ -519,9 +597,7 @@
                 axisReadouts: document.getElementById('axisReadouts'),
                 simHelp: document.getElementById('simHelp'),
                 simGammaLabel: document.getElementById('simGammaLabel'),
-                simBetaRow: document.getElementById('simBetaRow'),
-                smoothBtn: document.getElementById('smoothBtn'),
-                smoothLabel: document.getElementById('smoothLabel')
+                simBetaRow: document.getElementById('simBetaRow')
             };
 
             // --- Initialization ---
@@ -535,6 +611,8 @@
                 let savedSmoothing = 'med';
                 try { savedSmoothing = localStorage.getItem('level-smoothing') || 'med'; } catch (_) {}
                 setSmoothing(savedSmoothing);
+                try { state.hapticsEnabled = localStorage.getItem('level-haptics') !== '0'; } catch (_) {}
+                setSwitch(dom.hapticToggleBtn, state.hapticsEnabled);
                 keepAwake();
                 detectAndStartSensors();
                 requestAnimationFrame(renderLoop);
@@ -896,7 +974,7 @@
                     }
                     state.offsetRoll = raw;
                     state.pictureCalibrated = true;
-                    dom.resetCalBtn.disabled = false;
+                    updateCalibrationUI();
                     showMessage(`Calibrated (Offset: ${formatSignedAngle(raw)}°)`);
                     if (state.hapticsEnabled && navigator.vibrate) {
                         try { navigator.vibrate([15, 30, 15]); } catch (_) {}
@@ -906,7 +984,7 @@
                 state.offsetBeta = state.rawBeta;
                 state.offsetGamma = state.rawGamma;
                 state.isCalibrated = true;
-                dom.resetCalBtn.disabled = false;
+                updateCalibrationUI();
 
                 showMessage(`Calibrated (Offset: X ${formatSignedAngle(state.offsetGamma)}°, Y ${formatSignedAngle(state.offsetBeta)}°)`);
                 
@@ -922,14 +1000,14 @@
                 if (state.mode === 'picture') {
                     state.offsetRoll = 0;
                     state.pictureCalibrated = false;
-                    dom.resetCalBtn.disabled = true;
+                    updateCalibrationUI();
                     showMessage('Calibration reset to true horizon (0°)');
                     return;
                 }
                 state.offsetBeta = 0;
                 state.offsetGamma = 0;
                 state.isCalibrated = false;
-                dom.resetCalBtn.disabled = true;
+                updateCalibrationUI();
 
                 showMessage('Calibration reset to true horizon (0°)');
             }
@@ -941,14 +1019,12 @@
                 state.simMode = enable;
                 if (enable) {
                     dom.simulationPanel.classList.remove('hidden');
-                    dom.simToggleBtn.classList.add('border-iosGreen', 'text-iosGreen');
-                    dom.simToggleLabel.textContent = 'Exit Test';
+                    setSwitch(dom.simToggleBtn, true);
                     setStatus('Test Mode', 'bg-blue-400');
                     syncSlidersFromState();
                 } else {
                     dom.simulationPanel.classList.add('hidden');
-                    dom.simToggleBtn.classList.remove('border-iosGreen', 'text-iosGreen');
-                    dom.simToggleLabel.textContent = 'Test Mode';
+                    setSwitch(dom.simToggleBtn, false);
                     if (state.sensorActive) {
                         setStatus(`Sensor Active · ${state.sensorSource}`, 'bg-iosGreen');
                     }
@@ -979,7 +1055,10 @@
                 dom.simHelp.textContent = picture
                     ? 'Use the slider to simulate rotating the phone against a frame.'
                     : 'Drag directly on the circle above or use the sliders below to simulate tilt.';
-                dom.resetCalBtn.disabled = picture ? !state.pictureCalibrated : !state.isCalibrated;
+                updateCalibrationUI();
+                dom.calHelp.textContent = picture
+                    ? 'Hold the phone against an edge you know is level, then tap Zero.'
+                    : 'Put the phone on a surface you know is level, then tap Zero.';
                 dom.feedbackMessage.textContent = picture
                     ? 'Hold the phone upright on the edge of the picture'
                     : 'Place device flat on a surface to measure';
@@ -995,8 +1074,27 @@
 
             function setSmoothing(level) {
                 state.smoothing = SMOOTHING_PRESETS[level] ? level : 'med';
-                dom.smoothLabel.textContent = SMOOTHING_PRESETS[state.smoothing].label;
+                dom.smoothBtns.forEach(b => b.classList.toggle('active', b.dataset.smooth === state.smoothing));
                 try { localStorage.setItem('level-smoothing', state.smoothing); } catch (_) {}
+            }
+
+            function setSwitch(btn, on) {
+                btn.classList.toggle('on', on);
+                btn.setAttribute('aria-checked', on ? 'true' : 'false');
+            }
+
+            function updateCalibrationUI() {
+                const calibrated = state.mode === 'picture' ? state.pictureCalibrated : state.isCalibrated;
+                dom.resetCalBtn.disabled = !calibrated;
+                dom.calChip.classList.toggle('hidden', !calibrated);
+            }
+
+            function openSettings() {
+                dom.settingsSheet.classList.remove('hidden');
+            }
+
+            function closeSettings() {
+                dom.settingsSheet.classList.add('hidden');
             }
 
             function isFullscreen() {
@@ -1068,20 +1166,28 @@
                 dom.enableSensorsBtn.addEventListener('click', requestIOSPermission);
 
                 // Calibration Controls
-                dom.calibrateBtn.addEventListener('click', calibrateZero);
-                dom.resetCalBtn.addEventListener('click', resetCalibration);
+                // Close the sheet afterwards so the result is visible
+                dom.calibrateBtn.addEventListener('click', () => { calibrateZero(); closeSettings(); });
+                dom.resetCalBtn.addEventListener('click', () => { resetCalibration(); closeSettings(); });
+                dom.calChipReset.addEventListener('click', resetCalibration);
+
+                // Settings sheet
+                dom.settingsBtn.addEventListener('click', openSettings);
+                dom.settingsBackdrop.addEventListener('click', closeSettings);
+                dom.settingsCloseBtn.addEventListener('click', closeSettings);
+                document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSettings(); });
 
                 // Haptic Feedback Toggle
                 dom.hapticToggleBtn.addEventListener('click', () => {
                     state.hapticsEnabled = !state.hapticsEnabled;
-                    dom.hapticIconOn.classList.toggle('hidden', !state.hapticsEnabled);
-                    dom.hapticIconOff.classList.toggle('hidden', state.hapticsEnabled);
-                    showMessage(state.hapticsEnabled ? 'Haptic feedback enabled' : 'Haptic feedback muted');
+                    setSwitch(dom.hapticToggleBtn, state.hapticsEnabled);
+                    try { localStorage.setItem('level-haptics', state.hapticsEnabled ? '1' : '0'); } catch (_) {}
                 });
 
-                // Test Mode Toggle
+                // Test Mode Toggle (close the sheet so the simulator is visible)
                 dom.simToggleBtn.addEventListener('click', () => {
                     enableSimulationMode(!state.simMode);
+                    if (state.simMode) closeSettings();
                 });
 
                 // Simulation Sliders
@@ -1095,12 +1201,8 @@
                     dom.simBetaVal.textContent = `${formatSignedAngle(state.rawBeta)}°`;
                 });
 
-                // Smoothing strength (cycles Low → Med → High)
-                dom.smoothBtn.addEventListener('click', () => {
-                    const i = SMOOTHING_ORDER.indexOf(state.smoothing);
-                    setSmoothing(SMOOTHING_ORDER[(i + 1) % SMOOTHING_ORDER.length]);
-                    showMessage(`Smoothing: ${SMOOTHING_PRESETS[state.smoothing].label}`);
-                });
+                // Smoothing strength
+                dom.smoothBtns.forEach(btn => btn.addEventListener('click', () => setSmoothing(btn.dataset.smooth)));
 
                 // Mode switch
                 dom.modeSurfaceBtn.addEventListener('click', () => setMode('surface'));
